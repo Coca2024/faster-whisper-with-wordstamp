@@ -191,8 +191,8 @@ def gr_components():
                     vtt_output_2 = gr.File(label="ピリオド区切りの英語字幕ファイルとワードファイルです。",file_count="multiple")  # 分割・結合処理後のvtt,srtファイル
                     vtt_translated_file = gr.File(label="ピリオド区切りの英文から作った日本語字幕ファイルです。")  # 翻訳されたvtt,srtファイルの出力
             with gr.Row():
-                t7_translate_button = gr.Button("日本語vtt,srtの作成",variant='primary')
-                t7_clear_button = gr.Button("クリア")  
+                t7_clear_button = gr.Button("クリア") 
+                t7_translate_button = gr.Button("日本語vtt,srtの作成",variant='primary') 
             with gr.Row():
                 vtt_output_1 = gr.HTML()  # 分割・結合処理後のHTML表示
                 vtt_translated_content = gr.TextArea(label="翻訳された字幕情報を貼り付けてください。")  # 翻訳処理後の内容を貼り付け。        

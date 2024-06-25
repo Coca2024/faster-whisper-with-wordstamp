@@ -2,6 +2,7 @@ import re
 import os
 import gradio as gr
 import codecs
+from docx import Document
 
 def replace_special_periods(text):
     text = re.sub(r'\bDr\.', 'Dr<PERIOD>', text)
@@ -56,15 +57,14 @@ def process_vtt(lines):
     start_time = None
     end_time = None
     text = ""
-    segment_index = 0
     header = lines[0]
 
     for line in lines[1:]:
         if re.match(r'^\d+$', line.strip()):
             if text:
                 text = replace_special_periods(text)
-                segments.extend(split_segment(text.strip(), start_time, end_time))
-            segment_index = int(line.strip())
+                if start_time is not None and end_time is not None:
+                    segments.extend(split_segment(text.strip(), start_time, end_time))
             text = ""
         elif '-->' in line:
             times = line.strip().split(' --> ')
@@ -75,16 +75,20 @@ def process_vtt(lines):
 
     if text:
         text = replace_special_periods(text)
-        segments.extend(split_segment(text.strip(), start_time, end_time))
+        if start_time is not None and end_time is not None:
+            segments.extend(split_segment(text.strip(), start_time, end_time))
 
     merged_segments = merge_segments(segments)
 
-    output = [header, '']
+    output = [header]
     segment_number = 0
     for text, start, end in merged_segments:
         text = restore_special_periods(text)
-        output.append(f"{segment_number}\n{convert_seconds_to_time(start)} --> {convert_seconds_to_time(end)}\n{text}\n")
+        output.append(f"{segment_number}")
+        output.append(convert_seconds_to_time(start, 'vtt') + ' --> ' + convert_seconds_to_time(end, 'vtt'))
+        output.append(text)
         segment_number += 1
+        output.append("")  # セグメント間の改行を保持
 
     return '\n'.join(output)
 
@@ -128,11 +132,16 @@ def convert_time_to_seconds(time_str):
     h, m, s = map(float, time_str.replace(',', '.').split(':'))
     return h * 3600 + m * 60 + s
 
-def convert_seconds_to_time(seconds):
+def convert_seconds_to_time(seconds, format_type='vtt'):
     h = int(seconds // 3600)
     m = int((seconds % 3600) // 60)
     s = seconds % 60
-    return f"{h:02}:{m:02}:{s:06.3f}".replace('.', ',')
+    if format_type == 'vtt':
+        return f"{h:02}:{m:02}:{s:06.3f}".replace(',', '.')
+    else:
+        return f"{h:02}:{m:02}:{s:06.3f}".replace('.', ',')
+
+
 
 def process_file(input_file):
     if input_file is None:
@@ -141,12 +150,16 @@ def process_file(input_file):
     with open(input_file, 'r') as file:
         lines = file.readlines()
 
-    if lines[0].startswith('WEBVTT'):
+    _, file_extension = os.path.splitext(input_file)
+
+    if file_extension.lower() == '.vtt':
         output = process_vtt(lines)
         output_file = os.path.splitext(input_file)[0] + '_edited.vtt'
-    else:
+    elif file_extension.lower() == '.srt':
         output = process_srt(lines)
         output_file = os.path.splitext(input_file)[0] + '_edited.srt'
+    else:
+        raise ValueError('Unsupported file format')
 
     with open(output_file, 'w') as file:
         file.write(output)
@@ -161,6 +174,8 @@ def process_file(input_file):
     output_html = f"""<pre style="white-space: pre-wrap; overflow-y: auto; height: 500px; word-wrap: break-word; padding: 10px; font-family: inherit; font-size: inherit;">{output}</pre>"""
 
     return output_html, [output_file, docx_file]
+
+
 
 def vtt_translate(input_file, translated_content):
     ja_file_name, file_extension = os.path.splitext(input_file)
