@@ -196,6 +196,7 @@ def gr_components():
             with gr.Row():
                 vtt_output_1 = gr.HTML()  # 分割・結合処理後のHTML表示
                 vtt_translated_content = gr.TextArea(label="翻訳された字幕情報を貼り付けてください。")  # 翻訳処理後の内容を貼り付け。        
+
         ##クリアボタン追加分をまとめる。
         def t1_clear():
             return None,"","","",[],[],"","","","",""
